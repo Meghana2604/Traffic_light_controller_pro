@@ -1,0 +1,106 @@
+module traffic_light_controller
+#(
+    parameter int GREEN_TIME  = 10,
+    parameter int YELLOW_TIME = 3
+)
+(
+    input  logic clk,
+    input  logic rst_n,
+    output logic [2:0] hw_light,  // {Red, Yellow, Green}
+    output logic [2:0] sr_light
+);
+
+    // Explicit timing (removes warnings)
+    timeunit 1ns;
+    timeprecision 1ps;
+
+    // State encoding
+    typedef enum logic [1:0] {
+        S0_HW_GREEN  = 2'b00,
+        S1_HW_YELLOW = 2'b01,
+        S2_SR_GREEN  = 2'b10,
+        S3_SR_YELLOW = 2'b11
+    } state_t;
+
+    state_t current_state, next_state;
+    int counter;
+
+    //------------------------------------------
+    // State + Counter Register
+    //------------------------------------------
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            current_state <= S0_HW_GREEN;
+            counter       <= 0;
+        end
+        else begin
+            current_state <= next_state;
+
+            if (current_state != next_state)
+                counter <= 0;
+            else
+                counter <= counter + 1;
+        end
+    end
+
+    //------------------------------------------
+    // Next State Logic
+    //------------------------------------------
+    always_comb begin
+        next_state = current_state;
+
+        case (current_state)
+
+            S0_HW_GREEN:
+                if (counter == GREEN_TIME-1)
+                    next_state = S1_HW_YELLOW;
+
+            S1_HW_YELLOW:
+                if (counter == YELLOW_TIME-1)
+                    next_state = S2_SR_GREEN;
+
+            S2_SR_GREEN:
+                if (counter == GREEN_TIME-1)
+                    next_state = S3_SR_YELLOW;
+
+            S3_SR_YELLOW:
+                if (counter == YELLOW_TIME-1)
+                    next_state = S0_HW_GREEN;
+
+        endcase
+    end
+
+    //------------------------------------------
+    // Output Logic
+    //------------------------------------------
+    always_comb begin
+        // Default RED
+        hw_light = 3'b100;
+        sr_light = 3'b100;
+
+        case (current_state)
+
+            S0_HW_GREEN: begin
+                hw_light = 3'b001; // Green
+                sr_light = 3'b100; // Red
+            end
+
+            S1_HW_YELLOW: begin
+                hw_light = 3'b010; // Yellow
+                sr_light = 3'b100;
+            end
+
+            S2_SR_GREEN: begin
+                hw_light = 3'b100;
+                sr_light = 3'b001;
+            end
+
+            S3_SR_YELLOW: begin
+                hw_light = 3'b100;
+                sr_light = 3'b010;
+            end
+
+        endcase
+    end
+
+endmodule

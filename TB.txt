@@ -1,0 +1,52 @@
+module traffic_light_tb;
+
+    // Explicit timing 
+    timeunit 1ns;
+    timeprecision 1ps;
+
+    logic clk;
+    logic rst_n;
+    logic [2:0] hw_light;
+    logic [2:0] sr_light;
+
+    //------------------------------------------
+    // DUT Instantiation
+    //------------------------------------------
+    traffic_light_controller #(
+        .GREEN_TIME(10),
+        .YELLOW_TIME(3)
+    ) dut (
+        .clk(clk),
+        .rst_n(rst_n),
+        .hw_light(hw_light),
+        .sr_light(sr_light)
+    );
+
+    //------------------------------------------
+    // Clock Generation (10ns period)
+    //------------------------------------------
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+    //------------------------------------------
+    // VCD Dump
+    //------------------------------------------
+    initial begin
+        $dumpfile("traffic_light.vcd");
+        $dumpvars(0, traffic_light_tb);
+    end
+
+    //------------------------------------------
+    // Test Sequence
+    //------------------------------------------
+    initial begin
+        rst_n = 0;
+        #20;
+        rst_n = 1;
+
+        #500;  // Run long enough to see multiple cycles
+
+        $finish;
+    end
+
+endmodule
